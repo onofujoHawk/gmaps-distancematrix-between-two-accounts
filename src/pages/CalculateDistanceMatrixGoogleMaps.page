@@ -1,0 +1,183 @@
+<!--
+	View for CalculateDistanceMatrixGoogleMapsCtrl controller
+
+	@author Onofrio Falco
+	@date May 2017
+-->
+<apex:page showHeader="true" 
+	sidebar="true" 
+	cache="true" 
+	controller="CalculateDistanceMatrixGoogleMapsCtrl"
+	tabStyle="Account"> <!-- BEGIN -->
+
+	<apex:includeScript value="{!$Resource.JQuery_3_1_0}"/>
+    <apex:includeScript value="{!$Resource.JQueryUI_1_12_1}"/>
+    <apex:includeScript value="{!$Resource.JQueryBlockUI_2_7}"/>
+    <apex:stylesheet value="{!$Resource.Normalize_CSS}" />
+
+    <!-- Main visualforce form -->
+	<apex:form id="pgForm">
+
+		<!-- Show messages -->
+		<apex:pageMessages id="pbMessage"
+			escape="true" />
+
+		<!-- Account selection page form -->
+		<apex:pageBlock title="Google Maps API: Distance matrix evaluation" 
+			mode="edit">
+
+			<apex:pageBlockSection columns="2" 
+				collapsible="false">
+
+				<apex:pageBlockSectionItem >
+
+					<apex:outputText value="Account #1 " />
+					<apex:selectList id="originOpts"
+						onchange="watchSelect('originOpts','originLabel');"
+						value="{!account1Id}" 
+						size="1" 
+						multiselect="false">
+						<apex:selectOptions value="{!accountOptions}" />
+					</apex:selectList>
+
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+
+					<apex:outputText value="Origin address " />
+					<apex:outputLabel id="originLabel">
+						<!-- <small></small> -->
+					</apex:outputLabel>
+
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+
+					<apex:outputText value="Account #2" />
+					<apex:selectList id="destinationOpts"
+						onchange="watchSelect('destinationOpts','destinationLabel');"
+						value="{!account2Id}" 
+						size="1"
+						multiselect="false">
+						<apex:selectOptions value="{!accountOptions}" />
+					</apex:selectList>
+
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem >
+
+					<apex:outputText value="Destination address " />
+					<apex:outputLabel id="destinationLabel">
+						<!-- <small></small> -->
+					</apex:outputLabel>
+
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+			<!-- Button blocks -->
+			<apex:pageBlockButtons location="bottom">
+
+				<apex:commandButton id="btnCalculateDistance"
+					value="Calculate Distance"
+					action="{!btnCalculateDistance}"
+					rerender="pbResults,pbMessage" />
+
+			</apex:pageBlockButtons>
+
+		</apex:pageBlock>
+
+		<!-- Show results page form -->
+		<apex:pageBlock id="pbResults" 
+			title="Show Results" 
+			mode="edit">
+
+			<apex:pageBlockSection columns="1" 
+				collapsible="false">
+
+				<apex:pageBlockSectionItem id="distance">
+
+					<apex:outputText value="Distance (miles) " />
+					<apex:outputText value="{!distance}" />
+
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem id="duration">
+
+					<apex:outputText value="Duration " />
+					<apex:outputText value="{!duration}" /> 	
+
+				</apex:pageBlockSectionItem>
+
+				<apex:pageBlockSectionItem id="travel">
+
+					<apex:outputText value="Travel Time (minutes) " />
+					<apex:outputText value="{!travelTime}" />
+
+				</apex:pageBlockSectionItem>
+
+			</apex:pageBlockSection>
+
+		</apex:pageBlock>
+
+	</apex:form>
+
+	<!-- The solution adopted use Visualforce AJAX toolkit -->
+	<script type="text/javascript" src="/soap/ajax/39.0/connection.js"></script>
+	<script type="text/javascript" src="/soap/ajax/39.0/apex.js"></script>
+	<script type="text/javascript">
+
+    	sforce.connection.sessionId = '{!$Api.Session_ID}'; 
+		var $msg = 'An error has occurred during Remote Action invocation';
+
+		var watchSelect = function(optionId, labelId) {
+			var opt = document.querySelector("[id$="+optionId+"]");
+			var $member = document.querySelector("label[id$="+labelId+"]");
+			var $selected = opt.options[opt.selectedIndex].value;
+			var result = sforce.connection.query(
+				  "SELECT Id, Name, ShippingAddress, ShippingPostalCode, ShippingStreet, ShippingCity, ShippingState " + 
+				  "FROM Account " + 
+				  "WHERE ShippingStreet <> '' " + 
+				  "LIMIT 100", {
+					onSuccess : success, onFailure : failure
+				});
+
+			function success(result) {
+				var $accounts = result.getArray("records");
+				for (var i = 0; i < $accounts.length; i++) {
+					var obj = $accounts[i];
+					if (obj.Id == $selected) {
+						$result = get_address(obj);
+						//.find('small')
+					 	jQuery($member).html($result);
+						break;
+					} else {
+						//.find('small')
+						jQuery($member).html("");
+					}
+				}
+			}
+
+			function failure(error) {
+			  	window.alert("An error has occurred " + error);
+			}
+
+			function get_address(object) {
+				var address = object.ShippingStreet + ' ' + object.ShippingCity + ' ' + object.ShippingState + ' ' + object.ShippingPostalCode + ' ' + object.ShippingCountry;
+				address = replaceAll(address, 'undefined', '');
+				address = replaceAll(address, 'null', '');
+				return address.trim();
+			}
+
+			function escapeRegExp(str) {
+			  	return str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+			}
+
+			function replaceAll(str, find, replace) {
+			  	return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+			}
+		};
+
+	</script>
+	
+</apex:page> <!-- END -->
